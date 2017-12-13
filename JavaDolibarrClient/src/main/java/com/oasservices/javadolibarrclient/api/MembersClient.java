@@ -34,7 +34,7 @@ public class MembersClient {
         //get /members
         WebTarget resource = rootClient.getWebTarget().path("members");
         String jsonResponse = resource.request(MediaType.APPLICATION_JSON).get(String.class);
-        GenericType<List<Member>> listMembersType = new GenericType<List<Member>>(){};
+//        GenericType<List<Member>> listMembersType = new GenericType<List<Member>>(){};
         List<Member> members=null;
         try {
             members = rootClient.getObjectMapper().readValue(jsonResponse,new TypeReference<List<Member>>() {});

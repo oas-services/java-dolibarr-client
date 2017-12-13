@@ -7,11 +7,14 @@ package com.oasservices.javadolibarrclient.api;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.oasservices.javadolibarrclient.model.AgendaEvent;
 import com.oasservices.javadolibarrclient.model.ApiAnswer;
 import com.oasservices.javadolibarrclient.model.Member;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,16 +47,25 @@ public class DolibarrClient {
     DolibarrClient rootClient=null;
     private final static Properties config = new Properties();
     private String token=null;
+    private String url=null;
+    private String user=null;
+    private String password=null;
     private final Client client;
     private WebTarget webTarget;
     private WebTarget resource;
-    private Map<String,DolibarrClient> dolibarrClients=new HashMap<>();
+//    private Map<String,DolibarrClient> dolibarrClients=new HashMap<>();
     private ObjectMapper objectMapper = new ObjectMapper();
     private MembersClient membersClient;
+    private AgendaEventsClient agendaEventsClient;
     
     public String getToken() {
         return token;
     }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+    
     public WebTarget getWebTarget(){
         return webTarget;
     }
@@ -61,16 +73,9 @@ public class DolibarrClient {
         return objectMapper;
     }
     
-    public DolibarrClient() {
+    public DolibarrClient(String url) {
+        this.url = url;
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        try {
-            //config file loading
-            config.load(new FileReader("config.properties"));
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(DolibarrClient.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(DolibarrClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
         ClientConfig clientConfig = new ClientConfig();
         ClientRequestFilter clientRequestFilter = new ClientRequestFilter() {
             public void filter(ClientRequestContext clientRequestContext) throws IOException {
@@ -81,11 +86,29 @@ public class DolibarrClient {
         };
         clientConfig.register(clientRequestFilter);
         client = ClientBuilder.newBuilder().withConfig(clientConfig).sslContext(getSSLContext()).build();
-        webTarget = client.target(config.getProperty("DOLIBARR_API_URL"));
+        if (url != null){
+            webTarget = client.target(url);
+        }
+    }
+    
+    public void initFromProperties(){
+        try {
+            config.load(new FileReader("config.properties"));
+            user = config.getProperty("DOLIBARR_API_USER");
+            password = config.getProperty("DOLIBARR_API_PWD");
+            url = config.getProperty("DOLIBARR_API_URL");
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(DolibarrClient.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(DolibarrClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        webTarget = client.target(url);        
     }
     
     public void login(){
-        this.login(config.getProperty("DOLIBARR_API_USER"), config.getProperty("DOLIBARR_API_PWD"));
+        if (user !=null && password!=null){
+            this.login(user, password);
+        }
     }
     
     public void login(String login, String password){
@@ -145,6 +168,31 @@ public class DolibarrClient {
         return ctx;
     }
 
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public String getUser() {
+        return user;
+    }
+
+    public void setUser(String user) {
+        this.user = user;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    
+
     //Public API of client FACADE
     
     //MEMBERS
@@ -153,6 +201,13 @@ public class DolibarrClient {
             membersClient = new MembersClient(this);
         }
         return membersClient.getMembers();
+    }
+    //EVENTS
+    public List<AgendaEvent> getEvents(){
+        if (agendaEventsClient==null){
+            agendaEventsClient = new AgendaEventsClient(this);
+        }
+        return agendaEventsClient.getEvents();
     }
     
     
